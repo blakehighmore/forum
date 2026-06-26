@@ -14,7 +14,7 @@ public class RegisterDtoValidator : AbstractValidator<RegisterDto>
             .MaximumLength(20).WithMessage("Максимальная длина - 20 символов");
 
         RuleFor(r => r.Password)
-            .NotEmpty().WithMessage("Username - обязательное поле")
+            .NotEmpty().WithMessage("Пароль - обязательное поле")
             .MinimumLength(8).WithMessage("Минимальная длина - 8 символа")
             .MaximumLength(72).WithMessage("Максимальная длина - 72 символов");
     }

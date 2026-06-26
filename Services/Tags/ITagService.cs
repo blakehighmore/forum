@@ -1,0 +1,13 @@
+using backend.DTOs.Tags;
+
+
+namespace backend.Services.Tags;
+
+public interface ITagService
+{
+    Task<IEnumerable<TagReadDto>> GetAllAsync();
+    Task<TagReadDto> GetByIdAsync(int id);
+    Task<TagReadDto> CreateAsync(TagCreateDto dto);
+    Task<TagReadDto> UpdateAsync(int id, TagUpdateDto dto);
+    Task DeleteAsync(int id);
+}

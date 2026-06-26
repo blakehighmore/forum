@@ -13,8 +13,8 @@ public class User
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? BannedAt { get; set; }
     public Role Role { get; set; } = Role.User;
-    
+
     public Profile Profile { get; set; } = null!;
-    
+
     [NotMapped] public bool IsBanned => BannedAt != null;
 }

@@ -29,8 +29,23 @@ public class AuthController : ControllerBase
     {
         var token = await _service.LoginAsync(dto);
 
-        if (token is null) return Unauthorized();
 
-        return Ok(new { token });
+        return Ok(new { token.AccessToken, token.RefreshToken });
+    }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh(RefreshRequestDto dto)
+    {
+        var tokens = await _service.RefreshAsync(dto.RefreshToken);
+
+        return Ok(tokens);
+    }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(RefreshRequestDto dto)
+    {
+        await _service.LogoutAsync(dto.RefreshToken);
+
+        return NoContent();
     }
 }

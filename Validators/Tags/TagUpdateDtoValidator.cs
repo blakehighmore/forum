@@ -1,0 +1,21 @@
+using backend.DTOs.Tags;
+using FluentValidation;
+
+
+namespace backend.Validators.Tags;
+
+public class TagUpdateDtoValidator : AbstractValidator<TagUpdateDto>
+{
+    public TagUpdateDtoValidator()
+    {
+        RuleFor(t => t.Title)
+            .MinimumLength(1).WithMessage("Минимальная длина текста в поле - 1 символа")
+            .MaximumLength(20).WithMessage("Максимальная длина текста в поле - 20 символов")
+            .When(t => t.Title != null);
+
+        RuleFor(t => t.Color)
+            .NotEmpty().WithMessage("Поле Color обязательно для заполнения")
+            .Matches(@"^#[0-9A-Fa-f]{6}$").WithMessage("Необходим корректный Hex")
+            .When(t => t.Color != null);
+    }
+}

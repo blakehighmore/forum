@@ -5,5 +5,5 @@ namespace backend.Services.Auth.Jwt;
 
 public interface IJwtTokenService
 {
-     string JwtTokenGenerate(User user);
+    string JwtTokenGenerate(User user);
 }

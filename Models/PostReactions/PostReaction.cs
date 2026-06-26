@@ -8,7 +8,7 @@ public class PostReaction
 {
     public int Id { get; set; }
     public Reaction Reaction { get; set; }
-    
+
     public int UserId { get; set; }
     public User User { get; set; } = null!;
     public int PostId { get; set; }

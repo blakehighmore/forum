@@ -1,19 +1,304 @@
 @backend_HostAddress = http://localhost:5049
 
+### 1. Регистрация (200; если юзер уже есть → 409 ConflictException — это ок, иди на логин)
 POST {{backend_HostAddress}}/api/auth/register
 Content-Type: application/json
 
 {
-  "username": "ivw53anivan",
+  "username": "121iv5w53a4nivan",
   "password": "pise4kaya"
 }
-###
+
+### 2. Логин → токен сохраняется в переменную {{token}} автоматически
 POST {{backend_HostAddress}}/api/auth/login
 Content-Type: application/json
 
 {
-  "username": "ivw53anivan",
+  "username": "121iv5w53a4nivan",
   "password": "pise4kaya"
 }
 
-###
+> {%
+    client.global.set("token", response.body.accessToken);
+    client.global.set("refreshToken", response.body.refreshToken);
+%}
+
+### 3. Создать категорию (201 + Location; id сохраняется в {{categoryId}})
+POST {{backend_HostAddress}}/api/categories
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Программирование",
+  "description": "Раздел про разработку, код и архитектуру"
+}
+
+> {%
+    client.global.set("categoryId", response.body.id);
+%}
+
+### 4. Все категории (200, пагинация по умолчанию)
+GET {{backend_HostAddress}}/api/categories
+Authorization: Bearer {{token}}
+
+### 5. Все категории с пагинацией + поиском + сортировкой (200)
+GET {{backend_HostAddress}}/api/categories?page=1&pageSize=5&search=прог&sortBy=title&desc=true
+Authorization: Bearer {{token}}
+
+### 6. Категория по id (200)
+GET {{backend_HostAddress}}/api/categories/{{categoryId}}
+Authorization: Bearer {{token}}
+
+### 7. Обновить категорию — частично, только description (200)
+PUT {{backend_HostAddress}}/api/categories/{{categoryId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": null,
+  "description": "Обновлённое описание раздела"
+}
+
+### 8. Несуществующий id → 404 (NotFoundException)
+GET {{backend_HostAddress}}/api/categories/999999
+Authorization: Bearer {{token}}
+
+### 9. Дубликат названия → 409 (ConflictException)
+POST {{backend_HostAddress}}/api/categories
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Программирование",
+  "description": "Та же категория ещё раз — должен быть конфликт"
+}
+
+### 10. Невалидный body → 400 (FluentValidation: title < 4, description < 10)
+POST {{backend_HostAddress}}/api/categories
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "ab",
+  "description": "коротко"
+}
+
+### 11. Удалить категорию (204 No Content)
+DELETE {{backend_HostAddress}}/api/categories/{{categoryId}}
+Authorization: Bearer {{token}}
+
+### 12. Та же категория после удаления → 404
+GET {{backend_HostAddress}}/api/categories/{{categoryId}}
+Authorization: Bearer {{token}}
+
+### 13. Запрос без токена → 401 (Authorize сработал)
+GET {{backend_HostAddress}}/api/categories
+
+############################  TOPICS  ############################
+# Примечание: теги 1 (csharp) и 2 (dotnet) уже засеяны в БД.
+# Если БД пересоздашь — добавь теги заново (Tag-эндпоинта пока нет).
+
+### 14. Создать категорию под темы (id → {{topicCategoryId}})
+POST {{backend_HostAddress}}/api/categories
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Бэкенд3",
+  "description": "Раздел про серверную разработку"
+}
+
+> {%
+    client.global.set("topicCategoryId", response.body.id);
+%}
+
+### 15. Создать тему с тегами (201; автор из токена; id → {{topicId}})
+POST {{backend_HostAddress}}/api/topics
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Зачем нужен DI",
+  "description": "Обсуждаем dependency injection в ASP.NET",
+  "categoryId": {{topicCategoryId}},
+  "tagIds": [1, 2]
+}
+
+> {%
+    client.global.set("topicId", response.body.id);
+%}
+
+### 16. Все темы — АНОНИМНО, без токена (AllowAnonymous), теги в ответе (200)
+GET {{backend_HostAddress}}/api/topics?page=1&pageSize=10&search=DI&sortBy=title
+
+### 17. Тема по id (200, с тегами)
+GET {{backend_HostAddress}}/api/topics/{{topicId}}
+
+### 18. Обновить тему — частично, только description (200)
+PUT {{backend_HostAddress}}/api/topics/{{topicId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": null,
+  "description": "Обновлённое описание темы про DI"
+}
+
+### 19. Создать тему без токена → 401
+POST {{backend_HostAddress}}/api/topics
+Content-Type: application/json
+
+{
+  "title": "Без токена",
+  "description": "Должно быть 401 unauthorized без авторизации",
+  "categoryId": {{topicCategoryId}},
+  "tagIds": [1]
+}
+
+### 20. Несуществующая категория → 404
+POST {{backend_HostAddress}}/api/topics
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Плохая категория тест",
+  "description": "Описание достаточной длины для валидатора",
+  "categoryId": 999999,
+  "tagIds": [1]
+}
+
+### 21. Несуществующий тег → 404 (Distinct-проверка)
+POST {{backend_HostAddress}}/api/topics
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Плохой тег тест",
+  "description": "Описание достаточной длины для валидатора",
+  "categoryId": {{topicCategoryId}},
+  "tagIds": [99999]
+}
+
+### 22. Удалить тему (204 No Content)
+DELETE {{backend_HostAddress}}/api/topics/{{topicId}}
+Authorization: Bearer {{token}}
+
+############################  TAGS  ############################
+
+### 23. Создать тег (201; id → {{tagId}}); color — валидный hex
+POST {{backend_HostAddress}}/api/tags
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "архитектура",
+  "color": "#1A2B3C"
+}
+
+> {%
+    client.global.set("tagId", response.body.id);
+%}
+
+### 24. Все теги (200)
+GET {{backend_HostAddress}}/api/tags
+Authorization: Bearer {{token}}
+
+### 25. Тег по id (200)
+GET {{backend_HostAddress}}/api/tags/{{tagId}}
+Authorization: Bearer {{token}}
+
+### 26. Обновить тег — только цвет (200, title не меняется)
+PUT {{backend_HostAddress}}/api/tags/{{tagId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": null,
+  "color": "#FFAA00"
+}
+
+### 27. Дубликат названия → 409
+POST {{backend_HostAddress}}/api/tags
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "архитектура",
+  "color": "#000000"
+}
+
+### 28. Невалидный цвет → 400 (валидатор .Matches hex)
+POST {{backend_HostAddress}}/api/tags
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "плохойцвет",
+  "color": "red"
+}
+
+### 29. Удалить тег (204)
+DELETE {{backend_HostAddress}}/api/tags/{{tagId}}
+Authorization: Bearer {{token}}
+
+### 30. Удалённый тег → 404
+GET {{backend_HostAddress}}/api/tags/{{tagId}}
+Authorization: Bearer {{token}}
+
+############################  POSTS  ############################
+# Нужна созданная тема — сначала прогони #15 (создать тему → {{topicId}}).
+# Content должен быть >= 10 символов (валидатор).
+
+### 31. Создать пост в теме (201; id → {{postId}})
+POST {{backend_HostAddress}}/api/posts
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "content": "Первое сообщение в этой теме про DI",
+  "topicId": {{topicId}}
+}
+
+> {%
+    client.global.set("postId", response.body.id);
+%}
+
+### 32. Все посты с поиском (200)
+GET {{backend_HostAddress}}/api/posts?page=1&pageSize=10&search=DI&sortBy=content
+Authorization: Bearer {{token}}
+
+### 33. Пост по id (200, именно этот пост)
+GET {{backend_HostAddress}}/api/posts/{{postId}}
+Authorization: Bearer {{token}}
+
+### 34. Обновить пост — частично (200, UpdatedAt проставится)
+PUT {{backend_HostAddress}}/api/posts/{{postId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "content": "Обновлённое сообщение про dependency injection"
+}
+
+### 35. Пост в несуществующую тему → 404 (FK-проверка; content >= 10!)
+POST {{backend_HostAddress}}/api/posts
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "content": "Сообщение в несуществующую тему",
+  "topicId": 999999
+}
+
+### 36. Создать пост без токена → 401
+POST {{backend_HostAddress}}/api/posts
+Content-Type: application/json
+
+{
+  "content": "Сообщение без авторизации должно отлететь",
+  "topicId": {{topicId}}
+}
+
+### 37. Удалить пост (204)
+DELETE {{backend_HostAddress}}/api/posts/{{postId}}
+Authorization: Bearer {{token}}
